@@ -1,0 +1,21 @@
+// Core 패키지 메인 export 파일
+// Data
+export 'data/datasources/campaign_data_source.dart';
+export 'data/datasources/campaign_recruit_data_source.dart';
+export 'data/datasources/firebase_campaign_data_source.dart';
+export 'data/datasources/firebase_campaign_recruit_data_source.dart';
+export 'data/datasources/firebase_item_data_source.dart';
+export 'data/datasources/item_data_source.dart';
+export 'data/repositories/campaign_recruit_repository_impl.dart';
+export 'data/repositories/campaign_repository_impl.dart';
+export 'data/repositories/item_repository_impl.dart';
+// Domain
+export 'domain/entities/campaign.dart';
+export 'domain/entities/campaign_recruit.dart';
+export 'domain/entities/item.dart';
+export 'domain/repositories/campaign_recruit_repository.dart';
+export 'domain/repositories/campaign_repository.dart';
+export 'domain/repositories/item_repository.dart';
+export 'domain/usecases/campaign_recruit_usecases.dart';
+export 'domain/usecases/campaign_usecases.dart';
+export 'domain/usecases/item_usecases.dart';

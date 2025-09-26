@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "295380669772",
+    "project_id": "loungees-49897",
+    "storage_bucket": "loungees-49897.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:295380669772:android:e7b3d3eb8e61e94035ebe9",
+        "android_client_info": {
+          "package_name": "com.example.loungees_seller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHfsdeckeYNjchs2QK230deLRAL5OikDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:295380669772:android:b2acd4bee7740f1a35ebe9",
+        "android_client_info": {
+          "package_name": "com.example.reviewer_lounge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHfsdeckeYNjchs2QK230deLRAL5OikDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
