@@ -1,6 +1,6 @@
-import '../datasources/campaign_recruit_data_source.dart';
 import '../../domain/entities/campaign_recruit.dart';
 import '../../domain/repositories/campaign_recruit_repository.dart';
+import '../datasources/campaign_recruit_data_source.dart';
 
 class CampaignRecruitRepositoryImpl implements CampaignRecruitRepository {
   final CampaignRecruitDataSource _dataSource;
@@ -43,12 +43,20 @@ class CampaignRecruitRepositoryImpl implements CampaignRecruitRepository {
   }
 
   @override
-  Future<List<CampaignRecruit>> getRecruitsByStatus(RecruitStatus status) {
-    return _dataSource.getRecruitsByStatus(status);
+  Future<List<CampaignRecruit>> getRecruitsByApplicant(String phoneNumber) {
+    return _dataSource.getRecruitsByApplicant(phoneNumber);
   }
 
   @override
-  Future<List<CampaignRecruit>> getRecruitsByApplicant(String phoneNumber) {
-    return _dataSource.getRecruitsByApplicant(phoneNumber);
+  Future<List<CampaignRecruit>> getRecruitsByCampaignAndApplicant(
+      String campaignId, String phoneNumber) {
+    return _dataSource.getRecruitsByCampaignAndApplicant(
+        campaignId, phoneNumber);
+  }
+
+  @override
+  Future<Map<String, int>> getRecruitCountsByCampaignAndType(
+      String campaignId) {
+    return _dataSource.getRecruitCountsByCampaignAndType(campaignId);
   }
 }

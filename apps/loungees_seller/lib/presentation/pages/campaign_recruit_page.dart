@@ -1,9 +1,13 @@
 // 캠페인 신청 페이지
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared/shared.dart';
 
 import '../providers/campaign_provider.dart';
+import '../providers/campaign_recruit_provider.dart';
+import 'campaign_guide_page.dart';
 
 class CampaignRecruitPage extends StatefulWidget {
   final String shortId;
@@ -18,10 +22,21 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
   final _formKey = GlobalKey<FormState>();
 
   // 신청자 정보
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _applicantNameController = TextEditingController();
+  final _applicantPhoneController = TextEditingController();
+  final _applicantAccountController = TextEditingController();
+
+  // 구매자 정보
+  final _buyerNameController = TextEditingController();
+  final _buyerPhoneController = TextEditingController();
   final _reviewNicknameController = TextEditingController();
-  final _accountNumberController = TextEditingController();
+  final _buyerAccountController = TextEditingController();
+
+  // 신청자와 동일 체크
+  bool _isApplicantSame = false;
+
+  // 계좌 통일 체크
+  bool _isAccountUnified = false;
 
   // 리뷰 타입 선택
   String? _selectedReviewType;
@@ -48,20 +63,15 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
         listen: false,
       );
 
-      // 캠페인 목록 로드
-      await campaignProvider.loadCampaigns();
+      // shortId로 캠페인 찾기 (직접 쿼리)
+      _campaign = await campaignProvider.getCampaignByShortId(widget.shortId);
 
-      // 디버깅: 로드된 캠페인 목록 확인
-      final campaigns = campaignProvider.campaigns;
-      print('CampaignRecruitPage: 로드된 캠페인 수: ${campaigns.length}');
-      for (final campaign in campaigns) {
-        print(
-          'CampaignRecruitPage: 캠페인 ID: ${campaign.id}, Short ID: ${campaign.shortId}',
-        );
-      }
-
-      // shortId로 캠페인 찾기
-      _campaign = campaignProvider.getCampaignByShortId(widget.shortId);
+      // CampaignRecruitProvider 데이터 로드
+      final recruitProvider = Provider.of<CampaignRecruitProvider>(
+        context,
+        listen: false,
+      );
+      await recruitProvider.loadRecruits();
 
       if (_campaign == null) {
         throw Exception('캠페인을 찾을 수 없습니다 (ID: ${widget.shortId})');
@@ -225,7 +235,7 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '상품가: ₩${_campaign!.productPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                                  '상품가: ${PriceFormatter.formatWithWon(_campaign!.productPrice)}',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     color: Colors.green,
@@ -254,36 +264,151 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
               // 리뷰 타입 선택
               Text('리뷰 타입 선택', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
-              _buildReviewTypeSelection(),
+              Consumer<CampaignRecruitProvider>(
+                builder: (context, recruitProvider, child) {
+                  return _buildReviewTypeSelection(recruitProvider);
+                },
+              ),
               const SizedBox(height: 24),
 
               // 신청자 정보
               Text('신청자 정보', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _nameController,
+                controller: _applicantNameController,
                 decoration: const InputDecoration(
-                  labelText: '이름',
+                  labelText: '신청자 이름',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return '이름을 입력해주세요';
+                    return '신청자 이름을 입력해주세요';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  if (_isApplicantSame) {
+                    _buyerNameController.text = value;
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _applicantPhoneController,
+                decoration: const InputDecoration(
+                  labelText: '신청자 전화번호',
+                  hintText: '예: 01012345678',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return '신청자 전화번호를 입력해주세요';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  if (_isApplicantSame) {
+                    _buyerPhoneController.text = value;
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _applicantAccountController,
+                decoration: const InputDecoration(
+                  labelText: '신청자 계좌번호',
+                  border: OutlineInputBorder(),
+                  hintText: '예: 카카오뱅크 123-456-789012 홍길동',
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return '신청자 계좌번호를 입력해주세요';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  if (_isAccountUnified) {
+                    _buyerAccountController.text = value;
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // 구매자 정보
+              Row(
+                children: [
+                  Text('구매자 정보', style: Theme.of(context).textTheme.titleLarge),
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Checkbox(
+                        value: _isApplicantSame,
+                        onChanged: (value) {
+                          setState(() {
+                            _isApplicantSame = value ?? false;
+                            if (_isApplicantSame) {
+                              // 신청자 정보를 구매자 정보에 자동 입력
+                              _buyerNameController.text =
+                                  _applicantNameController.text;
+                              _buyerPhoneController.text =
+                                  _applicantPhoneController.text;
+                              _buyerAccountController.text =
+                                  _applicantAccountController.text;
+                            } else {
+                              // 체크 해제 시 구매자 정보 초기화
+                              _buyerNameController.clear();
+                              _buyerPhoneController.clear();
+                              _buyerAccountController.clear();
+                            }
+                          });
+                        },
+                        activeColor: Theme.of(context).colorScheme.primary,
+                      ),
+                      const Text('신청자와 동일'),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _buyerNameController,
+                decoration: InputDecoration(
+                  labelText: '구매자 이름',
+                  border: const OutlineInputBorder(),
+                  suffixIcon:
+                      _isApplicantSame
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null,
+                ),
+                enabled: !_isApplicantSame,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return '구매자 이름을 입력해주세요';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: '전화번호',
-                  border: OutlineInputBorder(),
+                controller: _buyerPhoneController,
+                decoration: InputDecoration(
+                  labelText: '구매자 전화번호',
+                  hintText: '예: 01012345678',
+                  border: const OutlineInputBorder(),
+                  suffixIcon:
+                      _isApplicantSame
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null,
                 ),
-                keyboardType: TextInputType.phone,
+                enabled: !_isApplicantSame,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return '전화번호를 입력해주세요';
+                    return '구매자 전화번호를 입력해주세요';
                   }
                   return null;
                 },
@@ -305,20 +430,47 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _accountNumberController,
-                decoration: const InputDecoration(
-                  labelText: '계좌번호',
-                  border: OutlineInputBorder(),
-                  hintText: '예: 123-456-789012',
+                controller: _buyerAccountController,
+                decoration: InputDecoration(
+                  labelText: '구매자 계좌번호',
+                  border: const OutlineInputBorder(),
+                  hintText: '예: 카카오뱅크 123-456-789012 홍길동',
+                  suffixIcon:
+                      _isApplicantSame
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null,
                 ),
+                enabled: !_isApplicantSame,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return '계좌번호를 입력해주세요';
+                    return '구매자 계좌번호를 입력해주세요';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              // 계좌 통일 체크
+              CheckboxListTile(
+                title: const Text('계좌 통일'),
+                subtitle: const Text('신청자와 구매자 계좌번호가 동일합니다'),
+                value: _isAccountUnified,
+                enabled: !_isApplicantSame, // 신청자와 동일이 체크되면 비활성화
+                onChanged:
+                    _isApplicantSame
+                        ? null
+                        : (value) {
+                          setState(() {
+                            _isAccountUnified = value ?? false;
+                            if (_isAccountUnified) {
+                              _buyerAccountController.text =
+                                  _applicantAccountController.text;
+                            }
+                          });
+                        },
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              const SizedBox(height: 16),
 
               // 신청 버튼
               SizedBox(
@@ -343,7 +495,9 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     );
   }
 
-  Widget _buildReviewTypeSelection() {
+  Widget _buildReviewTypeSelection(CampaignRecruitProvider recruitProvider) {
+    // 데이터 로드는 initState에서만 한 번 실행
+
     final reviewTypes = <String, String>{};
 
     if (_campaign!.requireVideo) {
@@ -365,6 +519,10 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     return Column(
       children:
           reviewTypes.entries.map((entry) {
+            final currentCount = _getCurrentCount(recruitProvider, entry.key);
+            final maxCount = _getMaxRecruitCount(entry.key);
+            final isClosed = currentCount >= maxCount;
+
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: RadioListTile<String>(
@@ -372,17 +530,22 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
                   children: [
                     Text(entry.value),
                     const SizedBox(width: 8),
+                    _buildRemainingCountBadge(currentCount, maxCount, isClosed),
+                    const Spacer(),
                     _buildReviewFeeBadge(entry.key),
                   ],
                 ),
                 subtitle: _buildReviewTypeSubtitle(entry.key),
                 value: entry.key,
                 groupValue: _selectedReviewType,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedReviewType = value;
-                  });
-                },
+                onChanged:
+                    isClosed
+                        ? null
+                        : (value) {
+                          setState(() {
+                            _selectedReviewType = value;
+                          });
+                        },
                 activeColor: Theme.of(context).colorScheme.primary,
               ),
             );
@@ -411,13 +574,13 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.green,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        '₩${fee ?? 0}',
+        PriceFormatter.formatWithWon(fee ?? 0),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -438,27 +601,91 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     }
   }
 
-  void _submitApplication() {
-    if (_formKey.currentState!.validate()) {
-      if (_selectedReviewType == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('리뷰 타입을 선택해주세요'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+  Future<void> _submitApplication() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedReviewType == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('리뷰 타입을 선택해주세요.')));
+      return;
+    }
 
-      // TODO: 실제 신청 로직 구현
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('신청이 완료되었습니다!'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      final campaignRecruitProvider = Provider.of<CampaignRecruitProvider>(
+        context,
+        listen: false,
       );
 
-      Navigator.pop(context);
+      final maxCount = _getMaxRecruitCount(_selectedReviewType!);
+
+      // 디버그: 입력값 확인
+      print(
+        'CampaignRecruitPage: 신청자 전화번호 = "${_applicantPhoneController.text}"',
+      );
+      print('CampaignRecruitPage: 구매자 전화번호 = "${_buyerPhoneController.text}"');
+      print('CampaignRecruitPage: 신청자 이름 = "${_applicantNameController.text}"');
+
+      await campaignRecruitProvider.createRecruit(
+        campaignId: _campaign!.shortId,
+        campaignFullId: _campaign!.id,
+        sellerId: _campaign!.sellerId,
+        applicantName: _applicantNameController.text,
+        applicantPhone: _applicantPhoneController.text,
+        applicantAccountNumber: _applicantAccountController.text,
+        buyerName: _buyerNameController.text,
+        buyerPhone: _buyerPhoneController.text,
+        reviewNickname: _reviewNicknameController.text,
+        buyerAccountNumber: _buyerAccountController.text,
+        isAccountUnified: _isAccountUnified,
+        reviewType: _selectedReviewType!,
+        maxCount: maxCount,
+        reviewFee: _getReviewFee(_selectedReviewType!),
+        campaignItemName: _campaign!.item.name,
+        campaignItemImageUrl: _campaign!.item.imageUrl,
+        campaignItemPrice: _campaign!.item.price.toDouble(),
+        campaignRecruitmentDate: _campaign!.recruitmentDate,
+        photoCount: _getPhotoCount(_selectedReviewType!),
+        textLength: _getTextLength(_selectedReviewType!),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('캠페인 신청이 완료되었습니다!')));
+
+        // 캠페인 가이드 페이지로 이동
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder:
+                (context) => CampaignGuidePage(
+                  campaign: _campaign!,
+                  selectedReviewType: _selectedReviewType!,
+                ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = '신청 중 문제가 발생했습니다.';
+
+        // 구체적인 오류 메시지 처리
+        if (e.toString().contains('이미 신청하신 캠페인입니다')) {
+          errorMessage = '이미 신청하신 캠페인입니다.';
+        } else if (e.toString().contains('해당 리뷰 타입의 모집이 마감되었습니다')) {
+          errorMessage = '해당 리뷰 타입의 모집이 마감되었습니다.';
+        } else if (e.toString().contains('Exception:')) {
+          // Exception: 부분을 제거하고 자연스러운 메시지로 변환
+          errorMessage = e.toString().replaceFirst('Exception: ', '');
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -466,12 +693,99 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     return 'https://api.allorigins.win/raw?url=${Uri.encodeComponent(url)}';
   }
 
+  int? _getReviewFee(String reviewType) {
+    switch (reviewType) {
+      case 'video':
+        return _campaign?.videoFee;
+      case 'photos':
+        return _campaign?.photoFee;
+      case 'text':
+        return _campaign?.textFee;
+      case 'rating':
+        return _campaign?.ratingFee;
+      case 'purchase':
+        return _campaign?.purchaseFee;
+      default:
+        return null;
+    }
+  }
+
+  int? _getPhotoCount(String reviewType) {
+    if (reviewType == 'photos') {
+      return _campaign?.photoCount;
+    }
+    return null;
+  }
+
+  int? _getTextLength(String reviewType) {
+    if (reviewType == 'text') {
+      return _campaign?.textLength;
+    }
+    return null;
+  }
+
+  int _getMaxRecruitCount(String reviewType) {
+    switch (reviewType) {
+      case 'video':
+        return _campaign?.videoRecruitCount ?? 0;
+      case 'photos':
+        return _campaign?.photoRecruitCount ?? 0;
+      case 'text':
+        return _campaign?.textRecruitCount ?? 0;
+      case 'rating':
+        return _campaign?.ratingRecruitCount ?? 0;
+      case 'purchase':
+        return _campaign?.purchaseRecruitCount ?? 0;
+      default:
+        return 0;
+    }
+  }
+
+  int _getCurrentCount(
+    CampaignRecruitProvider recruitProvider,
+    String reviewType,
+  ) {
+    final counts = recruitProvider.getRecruitCountsByCampaignAndTypeCached(
+      _campaign!.shortId,
+    );
+    final currentCount = counts[reviewType] ?? 0;
+    print(
+      'CampaignRecruitPage: _getCurrentCount - reviewType=$reviewType, currentCount=$currentCount, allCounts=$counts',
+    );
+    return currentCount;
+  }
+
+  Widget _buildRemainingCountBadge(
+    int currentCount,
+    int maxCount,
+    bool isClosed,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: isClosed ? Colors.red : Colors.blue,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        isClosed ? '마감' : '$currentCount/$maxCount',
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
+    _applicantNameController.dispose();
+    _applicantPhoneController.dispose();
+    _applicantAccountController.dispose();
+    _buyerNameController.dispose();
+    _buyerPhoneController.dispose();
     _reviewNicknameController.dispose();
-    _accountNumberController.dispose();
+    _buyerAccountController.dispose();
     super.dispose();
   }
 }

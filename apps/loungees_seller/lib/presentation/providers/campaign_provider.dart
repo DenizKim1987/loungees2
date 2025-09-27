@@ -9,6 +9,9 @@ class CampaignProvider with ChangeNotifier {
   final GetAllCampaignsUseCase _getAllCampaignsUseCase;
   final GetCampaignsBySellerUseCase _getCampaignsBySellerUseCase;
   final GetActiveCampaignsUseCase _getActiveCampaignsUseCase;
+  final GetCampaignByShortIdUseCase _getCampaignByShortIdUseCase;
+  final GetRecruitCountsByCampaignAndTypeUseCase
+  _getRecruitCountsByCampaignAndTypeUseCase;
 
   CampaignProvider({
     required CreateCampaignUseCase createCampaignUseCase,
@@ -17,12 +20,18 @@ class CampaignProvider with ChangeNotifier {
     required GetAllCampaignsUseCase getAllCampaignsUseCase,
     required GetCampaignsBySellerUseCase getCampaignsBySellerUseCase,
     required GetActiveCampaignsUseCase getActiveCampaignsUseCase,
+    required GetCampaignByShortIdUseCase getCampaignByShortIdUseCase,
+    required GetRecruitCountsByCampaignAndTypeUseCase
+    getRecruitCountsByCampaignAndTypeUseCase,
   }) : _createCampaignUseCase = createCampaignUseCase,
        _updateCampaignUseCase = updateCampaignUseCase,
        _deleteCampaignUseCase = deleteCampaignUseCase,
        _getAllCampaignsUseCase = getAllCampaignsUseCase,
        _getCampaignsBySellerUseCase = getCampaignsBySellerUseCase,
-       _getActiveCampaignsUseCase = getActiveCampaignsUseCase;
+       _getActiveCampaignsUseCase = getActiveCampaignsUseCase,
+       _getCampaignByShortIdUseCase = getCampaignByShortIdUseCase,
+       _getRecruitCountsByCampaignAndTypeUseCase =
+           getRecruitCountsByCampaignAndTypeUseCase;
 
   final List<Campaign> _campaigns = [];
   bool _isLoading = false;
@@ -154,12 +163,21 @@ class CampaignProvider with ChangeNotifier {
     }
   }
 
-  // Short ID로 캠페인 찾기
-  Campaign? getCampaignByShortId(String shortId) {
+  // Short ID로 캠페인 찾기 (직접 쿼리)
+  Future<Campaign?> getCampaignByShortId(String shortId) async {
     try {
-      return _campaigns.firstWhere((campaign) => campaign.shortId == shortId);
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final campaign = await _getCampaignByShortIdUseCase(shortId);
+      return campaign;
     } catch (e) {
+      _error = e.toString();
       return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -198,6 +216,18 @@ class CampaignProvider with ChangeNotifier {
             .toList();
       default:
         return [];
+    }
+  }
+
+  // 캠페인별 리뷰 타입별 등록인원 수 조회
+  Future<Map<String, int>> getRecruitCountsByCampaignAndType(
+    String campaignId,
+  ) async {
+    try {
+      return await _getRecruitCountsByCampaignAndTypeUseCase(campaignId);
+    } catch (e) {
+      print('CampaignProvider: 등록인원 수 조회 오류 - $e');
+      return {};
     }
   }
 }

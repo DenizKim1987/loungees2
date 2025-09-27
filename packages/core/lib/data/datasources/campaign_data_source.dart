@@ -4,6 +4,7 @@ import '../../domain/entities/campaign.dart';
 abstract class CampaignDataSource {
   Future<void> createCampaign(Campaign campaign);
   Future<Campaign?> getCampaignById(String id);
+  Future<Campaign?> getCampaignByShortId(String shortId);
   Future<void> updateCampaign(Campaign campaign);
   Future<void> deleteCampaign(String id);
   Future<List<Campaign>> getAllCampaigns();

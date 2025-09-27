@@ -8,6 +8,8 @@ abstract class CampaignRecruitDataSource {
   Future<List<CampaignRecruit>> getAllRecruits();
   Future<List<CampaignRecruit>> getRecruitsByCampaign(String campaignId);
   Future<List<CampaignRecruit>> getRecruitsBySeller(String sellerId);
-  Future<List<CampaignRecruit>> getRecruitsByStatus(RecruitStatus status);
   Future<List<CampaignRecruit>> getRecruitsByApplicant(String phoneNumber);
+  Future<List<CampaignRecruit>> getRecruitsByCampaignAndApplicant(
+      String campaignId, String phoneNumber);
+  Future<Map<String, int>> getRecruitCountsByCampaignAndType(String campaignId);
 }

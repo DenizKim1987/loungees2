@@ -78,3 +78,14 @@ class GetCampaignByIdUseCase {
     return repository.getCampaignById(id);
   }
 }
+
+// Short ID로 캠페인 조회 유즈케이스
+class GetCampaignByShortIdUseCase {
+  final CampaignRepository repository;
+
+  GetCampaignByShortIdUseCase(this.repository);
+
+  Future<Campaign?> call(String shortId) {
+    return repository.getCampaignByShortId(shortId);
+  }
+}

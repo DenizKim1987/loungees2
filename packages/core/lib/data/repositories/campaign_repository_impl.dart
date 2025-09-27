@@ -19,6 +19,11 @@ class CampaignRepositoryImpl implements CampaignRepository {
   }
 
   @override
+  Future<Campaign?> getCampaignByShortId(String shortId) {
+    return _dataSource.getCampaignByShortId(shortId);
+  }
+
+  @override
   Future<void> updateCampaign(Campaign campaign) {
     return _dataSource.updateCampaign(campaign);
   }

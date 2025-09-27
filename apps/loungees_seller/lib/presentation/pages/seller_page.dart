@@ -1,6 +1,7 @@
 // 셀러 페이지 - 캠페인보기와 아이템보기 탭
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared/shared.dart';
 
 import '../providers/campaign_provider.dart';
 import '../providers/item_provider.dart';
@@ -27,7 +28,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
       setState(() {});
     });
 
-    // 앱 시작 시 아이템과 캠페인 로드
+    // 앱 시작 시 아이템, 캠페인 데이터 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('SellerPage: 아이템 로드 시작');
       Provider.of<ItemProvider>(context, listen: false).loadItems();
@@ -287,7 +288,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                                       ),
                                     ),
                                     Text(
-                                      '상품가: ₩${campaign.productPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                                      '상품가: ${PriceFormatter.formatWithWon(campaign.productPrice)}',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: Colors.green,
@@ -302,46 +303,138 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                           const SizedBox(height: 12),
 
                           // 리뷰 조건들
-                          Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: [
-                              if (campaign.requireVideo)
-                                Chip(
-                                  label: Text(
-                                    '동영상 ${campaign.videoRecruitCount ?? 0}건',
-                                  ),
-                                  backgroundColor: Colors.blue.shade50,
-                                ),
-                              if (campaign.requirePhotos)
-                                Chip(
-                                  label: Text(
-                                    '사진${campaign.photoCount != null ? ' (${campaign.photoCount}장)' : ''} ${campaign.photoRecruitCount ?? 0}건',
-                                  ),
-                                  backgroundColor: Colors.green.shade50,
-                                ),
-                              if (campaign.requireText)
-                                Chip(
-                                  label: Text(
-                                    '텍스트${campaign.textLength != null ? ' (${campaign.textLength}자)' : ''} ${campaign.textRecruitCount ?? 0}건',
-                                  ),
-                                  backgroundColor: Colors.orange.shade50,
-                                ),
-                              if (campaign.requireRating)
-                                Chip(
-                                  label: Text(
-                                    '별점 ${campaign.ratingRecruitCount ?? 0}건',
-                                  ),
-                                  backgroundColor: Colors.purple.shade50,
-                                ),
-                              if (campaign.requirePurchase)
-                                Chip(
-                                  label: Text(
-                                    '구매확정 ${campaign.purchaseRecruitCount ?? 0}건',
-                                  ),
-                                  backgroundColor: Colors.red.shade50,
-                                ),
-                            ],
+                          FutureBuilder<Map<String, int>>(
+                            future: Provider.of<CampaignProvider>(
+                              context,
+                              listen: false,
+                            ).getRecruitCountsByCampaignAndType(
+                              campaign.shortId,
+                            ),
+                            builder: (context, snapshot) {
+                              final recruitCounts = snapshot.data ?? {};
+
+                              return Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: [
+                                  if (campaign.requireVideo)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.blue.shade200,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '동영상 ${recruitCounts['video'] ?? 0}/${campaign.videoRecruitCount ?? 0}건',
+                                        style: TextStyle(
+                                          color: Colors.blue.shade800,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (campaign.requirePhotos)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.green.shade200,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '사진${campaign.photoCount != null ? ' (${campaign.photoCount}장)' : ''} ${recruitCounts['photos'] ?? 0}/${campaign.photoRecruitCount ?? 0}건',
+                                        style: TextStyle(
+                                          color: Colors.green.shade800,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (campaign.requireText)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.orange.shade200,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '텍스트${campaign.textLength != null ? ' (${campaign.textLength}자)' : ''} ${recruitCounts['text'] ?? 0}/${campaign.textRecruitCount ?? 0}건',
+                                        style: TextStyle(
+                                          color: Colors.orange.shade800,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (campaign.requireRating)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.purple.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.purple.shade200,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '별점 ${recruitCounts['rating'] ?? 0}/${campaign.ratingRecruitCount ?? 0}건',
+                                        style: TextStyle(
+                                          color: Colors.purple.shade800,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (campaign.requirePurchase)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.red.shade200,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '구매확정 ${recruitCounts['purchase'] ?? 0}/${campaign.purchaseRecruitCount ?? 0}건',
+                                        style: TextStyle(
+                                          color: Colors.red.shade800,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
                           ),
                           const SizedBox(height: 12),
 
@@ -349,6 +442,21 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              TextButton.icon(
+                                onPressed: () {
+                                  // 디테일 페이지로 이동
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/campaign-detail/${campaign.shortId}',
+                                  );
+                                },
+                                icon: const Icon(Icons.visibility, size: 16),
+                                label: const Text('상세'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.blue,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               TextButton.icon(
                                 onPressed: () {
                                   // 수정 페이지로 이동
@@ -567,7 +675,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                             border: Border.all(color: Colors.green.shade200),
                           ),
                           child: Text(
-                            '₩${item.price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                            PriceFormatter.formatWithWon(item.price),
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -789,7 +897,7 @@ class _SellerPageState extends State<SellerPage> with TickerProviderStateMixin {
                   const SizedBox(height: 4),
                   // 가격
                   Text(
-                    '₩${item.price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                    PriceFormatter.formatWithWon(item.price),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

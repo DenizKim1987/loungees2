@@ -1,26 +1,43 @@
-import 'package:core/core.dart';
-
 // 캠페인 모집 엔티티
 class CampaignRecruit {
   final String id;
   final String campaignId; // 캠페인의 shortId
   final String campaignFullId; // 캠페인의 전체 ID (날짜-아이템ID)
   final String sellerId;
-  
-  // 모집자 정보
-  final String recruitName;
-  final String phoneNumber;
+
+  // 신청자 정보
+  final String applicantName;
+  final String applicantPhone;
+  final String applicantAccountNumber;
+
+  // 구매자 정보
+  final String buyerName;
+  final String buyerPhone;
   final String reviewNickname;
-  final String accountNumber;
-  
+  final String buyerAccountNumber;
+
+  // 계좌 통일 여부
+  final bool isAccountUnified;
+
   // 모집한 리뷰 타입
   final String reviewType; // 'video', 'photos', 'text', 'rating', 'purchase'
   final int? reviewFee; // 해당 리뷰 타입의 리뷰비
-  
-  // 모집 상태
-  final RecruitStatus status;
+
+  // 캠페인 정보 (스냅샷)
+  final String? campaignItemName; // 제품명
+  final String? campaignItemImageUrl; // 제품 썸네일 URL
+  final double? campaignItemPrice; // 제품 가격
+  final String? campaignRecruitmentDate; // 모집일
+
+  // 리뷰 조건 정보 (스냅샷)
+  final int? photoCount; // 사진 개수
+  final int? textLength; // 텍스트 길이
+
+  // 구매 및 리뷰 완료 상태
+  final bool isPurchased; // 구매완료 여부
+  final bool isReviewCompleted; // 리뷰완료 여부
   final String? rejectionReason; // 거절 사유
-  
+
   // 메타데이터
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -30,13 +47,24 @@ class CampaignRecruit {
     required this.campaignId,
     required this.campaignFullId,
     required this.sellerId,
-    required this.recruitName,
-    required this.phoneNumber,
+    required this.applicantName,
+    required this.applicantPhone,
+    required this.applicantAccountNumber,
+    required this.buyerName,
+    required this.buyerPhone,
     required this.reviewNickname,
-    required this.accountNumber,
+    required this.buyerAccountNumber,
+    required this.isAccountUnified,
     required this.reviewType,
     this.reviewFee,
-    required this.status,
+    this.campaignItemName,
+    this.campaignItemImageUrl,
+    this.campaignItemPrice,
+    this.campaignRecruitmentDate,
+    this.photoCount,
+    this.textLength,
+    required this.isPurchased,
+    required this.isReviewCompleted,
     this.rejectionReason,
     required this.createdAt,
     required this.updatedAt,
@@ -48,19 +76,29 @@ class CampaignRecruit {
       campaignId: json['campaignId'] ?? '',
       campaignFullId: json['campaignFullId'] ?? '',
       sellerId: json['sellerId'] ?? '',
-      recruitName: json['recruitName'] ?? '',
-      phoneNumber: json['phoneNumber'] ?? '',
+      applicantName: json['applicantName'] ?? '',
+      applicantPhone: json['applicantPhone'] ?? '',
+      applicantAccountNumber: json['applicantAccountNumber'] ?? '',
+      buyerName: json['buyerName'] ?? '',
+      buyerPhone: json['buyerPhone'] ?? '',
       reviewNickname: json['reviewNickname'] ?? '',
-      accountNumber: json['accountNumber'] ?? '',
+      buyerAccountNumber: json['buyerAccountNumber'] ?? '',
+      isAccountUnified: json['isAccountUnified'] ?? false,
       reviewType: json['reviewType'] ?? '',
       reviewFee: json['reviewFee'] as int?,
-      status: RecruitStatus.values.firstWhere(
-        (e) => e.name == json['status'],
-        orElse: () => RecruitStatus.pending,
-      ),
+      campaignItemName: json['campaignItemName'] as String?,
+      campaignItemImageUrl: json['campaignItemImageUrl'] as String?,
+      campaignItemPrice: (json['campaignItemPrice'] as num?)?.toDouble(),
+      campaignRecruitmentDate: json['campaignRecruitmentDate'] as String?,
+      photoCount: json['photoCount'] as int?,
+      textLength: json['textLength'] as int?,
+      isPurchased: json['isPurchased'] ?? false,
+      isReviewCompleted: json['isReviewCompleted'] ?? false,
       rejectionReason: json['rejectionReason'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt:
+          DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
     );
   }
 
@@ -70,13 +108,24 @@ class CampaignRecruit {
       'campaignId': campaignId,
       'campaignFullId': campaignFullId,
       'sellerId': sellerId,
-      'recruitName': recruitName,
-      'phoneNumber': phoneNumber,
+      'applicantName': applicantName,
+      'applicantPhone': applicantPhone,
+      'applicantAccountNumber': applicantAccountNumber,
+      'buyerName': buyerName,
+      'buyerPhone': buyerPhone,
       'reviewNickname': reviewNickname,
-      'accountNumber': accountNumber,
+      'buyerAccountNumber': buyerAccountNumber,
+      'isAccountUnified': isAccountUnified,
       'reviewType': reviewType,
       'reviewFee': reviewFee,
-      'status': status.name,
+      'campaignItemName': campaignItemName,
+      'campaignItemImageUrl': campaignItemImageUrl,
+      'campaignItemPrice': campaignItemPrice,
+      'campaignRecruitmentDate': campaignRecruitmentDate,
+      'photoCount': photoCount,
+      'textLength': textLength,
+      'isPurchased': isPurchased,
+      'isReviewCompleted': isReviewCompleted,
       'rejectionReason': rejectionReason,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -88,13 +137,24 @@ class CampaignRecruit {
     String? campaignId,
     String? campaignFullId,
     String? sellerId,
-    String? recruitName,
-    String? phoneNumber,
+    String? applicantName,
+    String? applicantPhone,
+    String? applicantAccountNumber,
+    String? buyerName,
+    String? buyerPhone,
     String? reviewNickname,
-    String? accountNumber,
+    String? buyerAccountNumber,
+    bool? isAccountUnified,
     String? reviewType,
     int? reviewFee,
-    RecruitStatus? status,
+    String? campaignItemName,
+    String? campaignItemImageUrl,
+    double? campaignItemPrice,
+    String? campaignRecruitmentDate,
+    int? photoCount,
+    int? textLength,
+    bool? isPurchased,
+    bool? isReviewCompleted,
     String? rejectionReason,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -104,25 +164,29 @@ class CampaignRecruit {
       campaignId: campaignId ?? this.campaignId,
       campaignFullId: campaignFullId ?? this.campaignFullId,
       sellerId: sellerId ?? this.sellerId,
-      recruitName: recruitName ?? this.recruitName,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      applicantName: applicantName ?? this.applicantName,
+      applicantPhone: applicantPhone ?? this.applicantPhone,
+      applicantAccountNumber:
+          applicantAccountNumber ?? this.applicantAccountNumber,
+      buyerName: buyerName ?? this.buyerName,
+      buyerPhone: buyerPhone ?? this.buyerPhone,
       reviewNickname: reviewNickname ?? this.reviewNickname,
-      accountNumber: accountNumber ?? this.accountNumber,
+      buyerAccountNumber: buyerAccountNumber ?? this.buyerAccountNumber,
+      isAccountUnified: isAccountUnified ?? this.isAccountUnified,
       reviewType: reviewType ?? this.reviewType,
       reviewFee: reviewFee ?? this.reviewFee,
-      status: status ?? this.status,
+      campaignItemName: campaignItemName ?? this.campaignItemName,
+      campaignItemImageUrl: campaignItemImageUrl ?? this.campaignItemImageUrl,
+      campaignItemPrice: campaignItemPrice ?? this.campaignItemPrice,
+      campaignRecruitmentDate:
+          campaignRecruitmentDate ?? this.campaignRecruitmentDate,
+      photoCount: photoCount ?? this.photoCount,
+      textLength: textLength ?? this.textLength,
+      isPurchased: isPurchased ?? this.isPurchased,
+      isReviewCompleted: isReviewCompleted ?? this.isReviewCompleted,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-}
-
-// 모집 상태 열거형
-enum RecruitStatus {
-  pending,    // 대기중
-  approved,    // 승인됨
-  rejected,    // 거절됨
-  completed,   // 완료됨 (리뷰 작성 완료)
-  cancelled,   // 취소됨
 }

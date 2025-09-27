@@ -1,1 +1,56 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"loungees-49897","appId":"1:295380669772:android:e7b3d3eb8e61e94035ebe9","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"loungees-49897","appId":"1:295380669772:ios:53aaf3b40e68c3eb35ebe9","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"macos":{"default":{"projectId":"loungees-49897","appId":"1:295380669772:ios:53aaf3b40e68c3eb35ebe9","uploadDebugSymbols":false,"fileOutput":"macos/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"loungees-49897","configurations":{"android":"1:295380669772:android:e7b3d3eb8e61e94035ebe9","ios":"1:295380669772:ios:53aaf3b40e68c3eb35ebe9","macos":"1:295380669772:ios:53aaf3b40e68c3eb35ebe9","web":"1:295380669772:web:ee2a671ea74ba0e835ebe9","windows":"1:295380669772:web:8b0f4dc10d5b6e7735ebe9"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "loungees-49897",
+          "appId": "1:295380669772:android:e7b3d3eb8e61e94035ebe9",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "loungees-49897",
+          "appId": "1:295380669772:ios:53aaf3b40e68c3eb35ebe9",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "loungees-49897",
+          "appId": "1:295380669772:ios:53aaf3b40e68c3eb35ebe9",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "loungees-49897",
+          "configurations": {
+            "android": "1:295380669772:android:e7b3d3eb8e61e94035ebe9",
+            "ios": "1:295380669772:ios:53aaf3b40e68c3eb35ebe9",
+            "macos": "1:295380669772:ios:53aaf3b40e68c3eb35ebe9",
+            "web": "1:295380669772:web:ee2a671ea74ba0e835ebe9",
+            "windows": "1:295380669772:web:8b0f4dc10d5b6e7735ebe9"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "site": "loungees-seller",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

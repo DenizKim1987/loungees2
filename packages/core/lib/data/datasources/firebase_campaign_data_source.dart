@@ -26,6 +26,20 @@ class FirebaseCampaignDataSource implements CampaignDataSource {
   }
 
   @override
+  Future<Campaign?> getCampaignByShortId(String shortId) async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .where('shortId', isEqualTo: shortId)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      return Campaign.fromJson(snapshot.docs.first.data());
+    }
+    return null;
+  }
+
+  @override
   Future<void> updateCampaign(Campaign campaign) async {
     await _firestore
         .collection(_collection)
