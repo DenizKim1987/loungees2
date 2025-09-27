@@ -37,6 +37,11 @@ class Campaign {
   final int? ratingFee;
   final int? purchaseFee;
 
+  // 쿠팡 파트너스 링크들
+  final String? mainKeywordLink; // 메인 키워드 검색 링크
+  final String? subKeywordLink; // 서브 키워드 검색 링크
+  final String? productLink; // 상품 링크
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -67,6 +72,9 @@ class Campaign {
     this.textFee,
     this.ratingFee,
     this.purchaseFee,
+    this.mainKeywordLink,
+    this.subKeywordLink,
+    this.productLink,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -99,6 +107,9 @@ class Campaign {
       textFee: json['textFee'],
       ratingFee: json['ratingFee'],
       purchaseFee: json['purchaseFee'],
+      mainKeywordLink: json['mainKeywordLink'],
+      subKeywordLink: json['subKeywordLink'],
+      productLink: json['productLink'],
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),
@@ -136,6 +147,9 @@ class Campaign {
       'textFee': textFee,
       'ratingFee': ratingFee,
       'purchaseFee': purchaseFee,
+      'mainKeywordLink': mainKeywordLink,
+      'subKeywordLink': subKeywordLink,
+      'productLink': productLink,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -168,6 +182,9 @@ class Campaign {
     int? textFee,
     int? ratingFee,
     int? purchaseFee,
+    String? mainKeywordLink,
+    String? subKeywordLink,
+    String? productLink,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -198,6 +215,9 @@ class Campaign {
       textFee: textFee ?? this.textFee,
       ratingFee: ratingFee ?? this.ratingFee,
       purchaseFee: purchaseFee ?? this.purchaseFee,
+      mainKeywordLink: mainKeywordLink ?? this.mainKeywordLink,
+      subKeywordLink: subKeywordLink ?? this.subKeywordLink,
+      productLink: productLink ?? this.productLink,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

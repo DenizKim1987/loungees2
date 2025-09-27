@@ -234,6 +234,14 @@ class _MyCampaignListPageState extends State<MyCampaignListPage> {
                         ),
                       const SizedBox(height: 2),
                       Text(
+                        '구매자: ${recruit.buyerName}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.tertiary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
                         '신청일: ${_formatDate(recruit.createdAt)}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey.shade600,
@@ -632,11 +640,7 @@ class _MyCampaignListPageState extends State<MyCampaignListPage> {
       if (campaign != null && mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder:
-                (context) => CampaignGuidePage(
-                  campaign: campaign,
-                  selectedReviewType: recruit.reviewType,
-                ),
+            builder: (context) => CampaignGuidePage(campaign: campaign),
           ),
         );
       } else {

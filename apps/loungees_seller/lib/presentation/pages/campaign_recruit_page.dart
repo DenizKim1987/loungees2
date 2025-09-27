@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared/shared.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/campaign_provider.dart';
 import '../providers/campaign_recruit_provider.dart';
@@ -38,17 +39,22 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
   // 계좌 통일 체크
   bool _isAccountUnified = false;
 
+  // 추가 구매자 정보 리스트
+  final List<Map<String, TextEditingController>> _additionalBuyers = [];
+
   // 리뷰 타입 선택
   String? _selectedReviewType;
 
   Campaign? _campaign;
   bool _isLoading = true;
   String? _error;
+  Map<String, int> _recruitCounts = {};
 
   @override
   void initState() {
     super.initState();
     _loadCampaign();
+    _loadCachedApplicantInfo();
   }
 
   Future<void> _loadCampaign() async {
@@ -66,16 +72,24 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
       // shortId로 캠페인 찾기 (직접 쿼리)
       _campaign = await campaignProvider.getCampaignByShortId(widget.shortId);
 
-      // CampaignRecruitProvider 데이터 로드
+      if (_campaign == null) {
+        throw Exception('캠페인을 찾을 수 없습니다 (ID: ${widget.shortId})');
+      }
+
+      // CampaignRecruitProvider에서 카운트만 조회 (전체 목록 로드하지 않음)
       final recruitProvider = Provider.of<CampaignRecruitProvider>(
         context,
         listen: false,
       );
-      await recruitProvider.loadRecruits();
 
-      if (_campaign == null) {
-        throw Exception('캠페인을 찾을 수 없습니다 (ID: ${widget.shortId})');
-      }
+      print(
+        'CampaignRecruitPage: 캠페인 ID 정보 - fullId: ${_campaign!.id}, shortId: ${_campaign!.shortId}',
+      );
+
+      // 카운트 조회만 수행 (전체 모집 목록은 로드하지 않음)
+      _recruitCounts = await recruitProvider.getRecruitCountsByCampaignAndType(
+        _campaign!.id,
+      );
 
       setState(() {
         _isLoading = false;
@@ -85,6 +99,40 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
         _isLoading = false;
         _error = e.toString();
       });
+    }
+  }
+
+  // 신청자 정보 캐싱 로드
+  Future<void> _loadCachedApplicantInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final cachedName = prefs.getString('applicant_name');
+      final cachedPhone = prefs.getString('applicant_phone');
+      final cachedAccount = prefs.getString('applicant_account');
+
+      if (cachedName != null) _applicantNameController.text = cachedName;
+      if (cachedPhone != null) _applicantPhoneController.text = cachedPhone;
+      if (cachedAccount != null)
+        _applicantAccountController.text = cachedAccount;
+    } catch (e) {
+      print('신청자 정보 캐싱 로드 실패: $e');
+    }
+  }
+
+  // 신청자 정보 캐싱 저장
+  Future<void> _saveApplicantInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString('applicant_name', _applicantNameController.text);
+      await prefs.setString('applicant_phone', _applicantPhoneController.text);
+      await prefs.setString(
+        'applicant_account',
+        _applicantAccountController.text,
+      );
+    } catch (e) {
+      print('신청자 정보 캐싱 저장 실패: $e');
     }
   }
 
@@ -157,18 +205,13 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 캠페인 정보 카드
+              // 캠페인 정보 카드 (타이틀 없음)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '캠페인 정보',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
                       Row(
                         children: [
                           if (_campaign!.item.imageUrl != null &&
@@ -271,206 +314,267 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
               ),
               const SizedBox(height: 24),
 
-              // 신청자 정보
-              Text('신청자 정보', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _applicantNameController,
-                decoration: const InputDecoration(
-                  labelText: '신청자 이름',
-                  border: OutlineInputBorder(),
+              // 신청자 정보 카드
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '신청자 정보',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _applicantNameController,
+                        decoration: const InputDecoration(
+                          labelText: '신청자 이름',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '신청자 이름을 입력해주세요';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          if (_isApplicantSame) {
+                            _buyerNameController.text = value;
+                          }
+                          _saveApplicantInfo(); // 신청자 정보 캐싱
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _applicantPhoneController,
+                        decoration: const InputDecoration(
+                          labelText: '신청자 전화번호',
+                          hintText: '예: 01012345678',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '신청자 전화번호를 입력해주세요';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          if (_isApplicantSame) {
+                            _buyerPhoneController.text = value;
+                          }
+                          _saveApplicantInfo(); // 신청자 정보 캐싱
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _applicantAccountController,
+                        decoration: const InputDecoration(
+                          labelText: '신청자 계좌번호',
+                          border: OutlineInputBorder(),
+                          hintText: '예: 카카오뱅크 123-456-789012 홍길동',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '신청자 계좌번호를 입력해주세요';
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          if (_isAccountUnified) {
+                            _buyerAccountController.text = value;
+                          }
+                          _saveApplicantInfo(); // 신청자 정보 캐싱
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '신청자 이름을 입력해주세요';
-                  }
-                  return null;
-                },
-                onChanged: (value) {
-                  if (_isApplicantSame) {
-                    _buyerNameController.text = value;
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _applicantPhoneController,
-                decoration: const InputDecoration(
-                  labelText: '신청자 전화번호',
-                  hintText: '예: 01012345678',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '신청자 전화번호를 입력해주세요';
-                  }
-                  return null;
-                },
-                onChanged: (value) {
-                  if (_isApplicantSame) {
-                    _buyerPhoneController.text = value;
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _applicantAccountController,
-                decoration: const InputDecoration(
-                  labelText: '신청자 계좌번호',
-                  border: OutlineInputBorder(),
-                  hintText: '예: 카카오뱅크 123-456-789012 홍길동',
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '신청자 계좌번호를 입력해주세요';
-                  }
-                  return null;
-                },
-                onChanged: (value) {
-                  if (_isAccountUnified) {
-                    _buyerAccountController.text = value;
-                  }
-                },
               ),
               const SizedBox(height: 24),
 
-              // 구매자 정보
-              Row(
-                children: [
-                  Text('구매자 정보', style: Theme.of(context).textTheme.titleLarge),
-                  const Spacer(),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+              // 구매자 정보 카드
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Checkbox(
-                        value: _isApplicantSame,
-                        onChanged: (value) {
-                          setState(() {
-                            _isApplicantSame = value ?? false;
-                            if (_isApplicantSame) {
-                              // 신청자 정보를 구매자 정보에 자동 입력
-                              _buyerNameController.text =
-                                  _applicantNameController.text;
-                              _buyerPhoneController.text =
-                                  _applicantPhoneController.text;
-                              _buyerAccountController.text =
-                                  _applicantAccountController.text;
-                            } else {
-                              // 체크 해제 시 구매자 정보 초기화
-                              _buyerNameController.clear();
-                              _buyerPhoneController.clear();
-                              _buyerAccountController.clear();
-                            }
-                          });
-                        },
-                        activeColor: Theme.of(context).colorScheme.primary,
+                      Row(
+                        children: [
+                          Text(
+                            '구매자 정보',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const Spacer(),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Checkbox(
+                                value: _isApplicantSame,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _isApplicantSame = value ?? false;
+                                    if (_isApplicantSame) {
+                                      // 신청자 정보를 구매자 정보에 자동 입력
+                                      _buyerNameController.text =
+                                          _applicantNameController.text;
+                                      _buyerPhoneController.text =
+                                          _applicantPhoneController.text;
+                                      _buyerAccountController.text =
+                                          _applicantAccountController.text;
+                                    } else {
+                                      // 체크 해제 시 구매자 정보 초기화
+                                      _buyerNameController.clear();
+                                      _buyerPhoneController.clear();
+                                      _buyerAccountController.clear();
+                                    }
+                                  });
+                                },
+                                activeColor:
+                                    Theme.of(context).colorScheme.primary,
+                              ),
+                              const Text('신청자와 동일'),
+                            ],
+                          ),
+                        ],
                       ),
-                      const Text('신청자와 동일'),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _buyerNameController,
+                        decoration: InputDecoration(
+                          labelText: '구매자 이름',
+                          border: const OutlineInputBorder(),
+                          suffixIcon:
+                              _isApplicantSame
+                                  ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                  : null,
+                        ),
+                        enabled: !_isApplicantSame,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '구매자 이름을 입력해주세요';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _buyerPhoneController,
+                        decoration: InputDecoration(
+                          labelText: '구매자 전화번호',
+                          hintText: '예: 01012345678',
+                          border: const OutlineInputBorder(),
+                          suffixIcon:
+                              _isApplicantSame
+                                  ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                  : null,
+                        ),
+                        enabled: !_isApplicantSame,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '구매자 전화번호를 입력해주세요';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _reviewNicknameController,
+                        decoration: const InputDecoration(
+                          labelText: '리뷰 닉네임',
+                          border: OutlineInputBorder(),
+                          hintText: '리뷰 작성 시 사용할 닉네임',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '리뷰 닉네임을 입력해주세요';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _buyerAccountController,
+                        decoration: InputDecoration(
+                          labelText: '구매자 계좌번호',
+                          border: const OutlineInputBorder(),
+                          hintText: '예: 카카오뱅크 123-456-789012 홍길동',
+                          suffixIcon:
+                              _isApplicantSame
+                                  ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                  : null,
+                        ),
+                        enabled: !_isApplicantSame,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return '구매자 계좌번호를 입력해주세요';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 계좌 통일 체크
+                      CheckboxListTile(
+                        title: const Text('계좌 통일'),
+                        subtitle: const Text('신청자와 구매자 계좌번호가 동일합니다'),
+                        value: _isAccountUnified,
+                        enabled: !_isApplicantSame, // 신청자와 동일이 체크되면 비활성화
+                        onChanged:
+                            _isApplicantSame
+                                ? null
+                                : (value) {
+                                  setState(() {
+                                    _isAccountUnified = value ?? false;
+                                    if (_isAccountUnified) {
+                                      _buyerAccountController.text =
+                                          _applicantAccountController.text;
+                                    }
+                                  });
+                                },
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _buyerNameController,
-                decoration: InputDecoration(
-                  labelText: '구매자 이름',
-                  border: const OutlineInputBorder(),
-                  suffixIcon:
-                      _isApplicantSame
-                          ? const Icon(Icons.check_circle, color: Colors.green)
-                          : null,
                 ),
-                enabled: !_isApplicantSame,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '구매자 이름을 입력해주세요';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _buyerPhoneController,
-                decoration: InputDecoration(
-                  labelText: '구매자 전화번호',
-                  hintText: '예: 01012345678',
-                  border: const OutlineInputBorder(),
-                  suffixIcon:
-                      _isApplicantSame
-                          ? const Icon(Icons.check_circle, color: Colors.green)
-                          : null,
-                ),
-                enabled: !_isApplicantSame,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '구매자 전화번호를 입력해주세요';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _reviewNicknameController,
-                decoration: const InputDecoration(
-                  labelText: '리뷰 닉네임',
-                  border: OutlineInputBorder(),
-                  hintText: '리뷰 작성 시 사용할 닉네임',
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '리뷰 닉네임을 입력해주세요';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _buyerAccountController,
-                decoration: InputDecoration(
-                  labelText: '구매자 계좌번호',
-                  border: const OutlineInputBorder(),
-                  hintText: '예: 카카오뱅크 123-456-789012 홍길동',
-                  suffixIcon:
-                      _isApplicantSame
-                          ? const Icon(Icons.check_circle, color: Colors.green)
-                          : null,
-                ),
-                enabled: !_isApplicantSame,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '구매자 계좌번호를 입력해주세요';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
 
-              // 계좌 통일 체크
-              CheckboxListTile(
-                title: const Text('계좌 통일'),
-                subtitle: const Text('신청자와 구매자 계좌번호가 동일합니다'),
-                value: _isAccountUnified,
-                enabled: !_isApplicantSame, // 신청자와 동일이 체크되면 비활성화
-                onChanged:
-                    _isApplicantSame
-                        ? null
-                        : (value) {
-                          setState(() {
-                            _isAccountUnified = value ?? false;
-                            if (_isAccountUnified) {
-                              _buyerAccountController.text =
-                                  _applicantAccountController.text;
-                            }
-                          });
-                        },
-                controlAffinity: ListTileControlAffinity.leading,
+              // 구매자 추가 버튼
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _addAdditionalBuyer,
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('구매자 추가'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+
+              // 추가 구매자 카드들
+              ..._buildAdditionalBuyerCards(),
 
               // 신청 버튼
               SizedBox(
@@ -656,11 +760,7 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
         // 캠페인 가이드 페이지로 이동
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder:
-                (context) => CampaignGuidePage(
-                  campaign: _campaign!,
-                  selectedReviewType: _selectedReviewType!,
-                ),
+            builder: (context) => CampaignGuidePage(campaign: _campaign!),
           ),
         );
       }
@@ -745,12 +845,9 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     CampaignRecruitProvider recruitProvider,
     String reviewType,
   ) {
-    final counts = recruitProvider.getRecruitCountsByCampaignAndTypeCached(
-      _campaign!.shortId,
-    );
-    final currentCount = counts[reviewType] ?? 0;
+    final currentCount = _recruitCounts[reviewType] ?? 0;
     print(
-      'CampaignRecruitPage: _getCurrentCount - reviewType=$reviewType, currentCount=$currentCount, allCounts=$counts',
+      'CampaignRecruitPage: _getCurrentCount - reviewType=$reviewType, currentCount=$currentCount, allCounts=$_recruitCounts',
     );
     return currentCount;
   }
@@ -777,6 +874,132 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     );
   }
 
+  // 추가 구매자 추가
+  void _addAdditionalBuyer() {
+    setState(() {
+      _additionalBuyers.add({
+        'name': TextEditingController(),
+        'phone': TextEditingController(),
+        'nickname': TextEditingController(),
+        'account': TextEditingController(),
+      });
+    });
+  }
+
+  // 추가 구매자 제거
+  void _removeAdditionalBuyer(int index) {
+    setState(() {
+      // 컨트롤러들 dispose
+      _additionalBuyers[index]['name']?.dispose();
+      _additionalBuyers[index]['phone']?.dispose();
+      _additionalBuyers[index]['nickname']?.dispose();
+      _additionalBuyers[index]['account']?.dispose();
+
+      _additionalBuyers.removeAt(index);
+    });
+  }
+
+  // 추가 구매자 카드들 빌드
+  List<Widget> _buildAdditionalBuyerCards() {
+    List<Widget> cards = [];
+
+    for (int i = 0; i < _additionalBuyers.length; i++) {
+      cards.add(
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '구매자 정보 ${i + 2}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => _removeAdditionalBuyer(i),
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      tooltip: '구매자 정보 삭제',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _additionalBuyers[i]['name'],
+                  decoration: const InputDecoration(
+                    labelText: '구매자 이름',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return '구매자 이름을 입력해주세요';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _additionalBuyers[i]['phone'],
+                  decoration: const InputDecoration(
+                    labelText: '구매자 전화번호',
+                    hintText: '예: 01012345678',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return '구매자 전화번호를 입력해주세요';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _additionalBuyers[i]['nickname'],
+                  decoration: const InputDecoration(
+                    labelText: '리뷰 닉네임',
+                    border: OutlineInputBorder(),
+                    hintText: '리뷰 작성 시 사용할 닉네임',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return '리뷰 닉네임을 입력해주세요';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _additionalBuyers[i]['account'],
+                  decoration: const InputDecoration(
+                    labelText: '구매자 계좌번호',
+                    border: OutlineInputBorder(),
+                    hintText: '예: 카카오뱅크 123-456-789012 홍길동',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return '구매자 계좌번호를 입력해주세요';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (i < _additionalBuyers.length - 1) {
+        cards.add(const SizedBox(height: 16));
+      }
+    }
+
+    return cards;
+  }
+
   @override
   void dispose() {
     _applicantNameController.dispose();
@@ -786,6 +1009,15 @@ class _CampaignRecruitPageState extends State<CampaignRecruitPage> {
     _buyerPhoneController.dispose();
     _reviewNicknameController.dispose();
     _buyerAccountController.dispose();
+
+    // 추가 구매자 컨트롤러들 dispose
+    for (var buyer in _additionalBuyers) {
+      buyer['name']?.dispose();
+      buyer['phone']?.dispose();
+      buyer['nickname']?.dispose();
+      buyer['account']?.dispose();
+    }
+
     super.dispose();
   }
 }

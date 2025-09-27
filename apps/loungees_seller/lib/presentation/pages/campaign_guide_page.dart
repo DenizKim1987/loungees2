@@ -1,20 +1,16 @@
 // 캠페인 가이드 페이지
-import 'package:core/core.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:shared/shared.dart';
+import 'dart:html' as html;
 
-import '../providers/campaign_recruit_provider.dart';
+import 'package:core/core.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:shared/shared.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CampaignGuidePage extends StatefulWidget {
   final Campaign campaign;
-  final String selectedReviewType;
 
-  const CampaignGuidePage({
-    super.key,
-    required this.campaign,
-    required this.selectedReviewType,
-  });
+  const CampaignGuidePage({super.key, required this.campaign});
 
   @override
   State<CampaignGuidePage> createState() => _CampaignGuidePageState();
@@ -25,18 +21,55 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('캠페인 가이드'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('쿠팡 구매가이드'),
+        automaticallyImplyLeading: false, // 뒤로가기 버튼 제거
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 캠페인 기본 정보
+            // 캠페인 기본 정보 (제목 없이)
             _buildCampaignInfo(context),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
+            // 메인 키워드 + 필터 카드
+            _buildMainKeywordAndFilterCard(context),
+            const SizedBox(height: 8),
+
+            // 서브 키워드 + 경고 카드
+            _buildSubKeywordAndWarningCard(context),
+            const SizedBox(height: 8),
+
+            // 리뷰 조건 (택1)
+            _buildReviewConditionsSection(context),
+            const SizedBox(height: 8),
+
+            // 입금 안내
+            _buildPaymentInfoSection(context),
+            const SizedBox(height: 8),
+
+            // 비상 연락처
+            _buildContactSection(context),
+            const SizedBox(height: 16),
+
+            // 신청하기 버튼
+            _buildApplyButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainKeywordAndFilterCard(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             // 메인 키워드
             if (widget.campaign.keywords.isNotEmpty) ...[
               Row(
@@ -45,7 +78,7 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                     '메인 키워드',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Colors.red.shade600,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -56,14 +89,17 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                     icon: const Icon(Icons.search, size: 14),
                     label: const Text('키워드검색', style: TextStyle(fontSize: 12)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
                       ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ],
@@ -84,25 +120,22 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                borderRadius: BorderRadius.circular(20),
+                                color: Colors.red.shade600,
+                                borderRadius: BorderRadius.circular(8),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.3),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
+                                    color: Colors.red.shade600.withOpacity(0.5),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
                               child: Text(
                                 keyword.trim(),
                                 style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14,
                                 ),
                               ),
                             ),
@@ -110,9 +143,23 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                           .toList(),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
+            // 필터 정보
+            _buildFiltersSection(context),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildSubKeywordAndWarningCard(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             // 서브 키워드
             if (widget.campaign.subKeywords.isNotEmpty) ...[
               Row(
@@ -142,6 +189,9 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                       ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                     ),
                   ),
                 ],
@@ -187,27 +237,7 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                           .toList(),
                 ),
               ),
-              const SizedBox(height: 24),
             ],
-
-            // 필터 정보
-            _buildFiltersSection(context),
-            const SizedBox(height: 24),
-
-            // 리뷰 조건
-            _buildReviewConditionsSection(context),
-            const SizedBox(height: 24),
-
-            // 입금 안내
-            _buildPaymentInfoSection(context),
-            const SizedBox(height: 24),
-
-            // 비상 연락처
-            _buildContactSection(context),
-            const SizedBox(height: 32),
-
-            // 완료 버튼
-            _buildCompleteButton(context),
           ],
         ),
       ),
@@ -218,77 +248,60 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              '캠페인 정보',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                // 상품 썸네일
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _getCorsProxyUrl(widget.campaign.item.imageUrl ?? ''),
+            // 상품 썸네일
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                _getCorsProxyUrl(widget.campaign.item.imageUrl ?? ''),
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
                     width: 80,
                     height: 80,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey.shade200,
-                        child: const Center(child: CircularProgressIndicator()),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image_not_supported, size: 40),
-                      );
-                    },
+                    color: Colors.grey.shade200,
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print('이미지 로딩 에러: $error');
+                  return _buildFallbackImage();
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            // 상품 정보
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.campaign.item.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                // 상품 정보
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.campaign.item.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        PriceFormatter.formatWithWon(
-                          widget.campaign.item.price,
-                        ),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '모집일: ${_formatDate(DateTime.parse(widget.campaign.recruitmentDate))}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  Text(
+                    PriceFormatter.formatWithWon(widget.campaign.item.price),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '모집일: ${_formatDate(DateTime.parse(widget.campaign.recruitmentDate))}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -297,60 +310,44 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
   }
 
   Widget _buildFiltersSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '필터',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            if (widget.campaign.item.filters.isNotEmpty) ...[
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      widget.campaign.item.filters
-                          .map(
-                            (filter) => Chip(
-                              label: Text(
-                                filter,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              backgroundColor:
-                                  Theme.of(
-                                    context,
-                                  ).colorScheme.tertiaryContainer,
-                              labelStyle: TextStyle(
-                                color:
-                                    Theme.of(
-                                      context,
-                                    ).colorScheme.onTertiaryContainer,
-                                fontSize: 12,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                ),
-              ),
-            ] else ...[
-              Text(
-                '필터가 설정되지 않았습니다.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
-              ),
-            ],
-          ],
+    if (widget.campaign.item.filters.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '필터',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
-      ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                widget.campaign.item.filters
+                    .map(
+                      (filter) => Chip(
+                        label: Text(
+                          filter,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        backgroundColor: Colors.grey.shade200,
+                        labelStyle: TextStyle(
+                          color: Colors.grey.shade800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                    .toList(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -362,7 +359,7 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '리뷰 조건',
+              '리뷰 조건 (택1)',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -376,52 +373,80 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
   }
 
   Widget _buildSelectedReviewCondition(BuildContext context) {
-    switch (widget.selectedReviewType) {
-      case 'video':
-        return _buildReviewConditionItem(
+    final List<Widget> reviewConditions = [];
+
+    // 동영상 리뷰
+    if ((widget.campaign.videoRecruitCount ?? 0) > 0) {
+      reviewConditions.add(
+        _buildReviewConditionItem(
           context,
           '동영상 리뷰',
           true,
           widget.campaign.videoRecruitCount ?? 0,
           widget.campaign.videoFee ?? 0,
-        );
-      case 'photos':
-        return _buildReviewConditionItem(
+        ),
+      );
+    }
+
+    // 사진 리뷰
+    if ((widget.campaign.photoRecruitCount ?? 0) > 0) {
+      reviewConditions.add(
+        _buildReviewConditionItem(
           context,
           '사진 리뷰',
           true,
           widget.campaign.photoRecruitCount ?? 0,
           widget.campaign.photoFee ?? 0,
           subtitle: '${widget.campaign.photoCount ?? 0}장',
-        );
-      case 'text':
-        return _buildReviewConditionItem(
+        ),
+      );
+    }
+
+    // 텍스트 리뷰
+    if ((widget.campaign.textRecruitCount ?? 0) > 0) {
+      reviewConditions.add(
+        _buildReviewConditionItem(
           context,
           '텍스트 리뷰',
           true,
           widget.campaign.textRecruitCount ?? 0,
           widget.campaign.textFee ?? 0,
           subtitle: '${widget.campaign.textLength ?? 0}자',
-        );
-      case 'rating':
-        return _buildReviewConditionItem(
+        ),
+      );
+    }
+
+    // 별점 리뷰
+    if ((widget.campaign.ratingRecruitCount ?? 0) > 0) {
+      reviewConditions.add(
+        _buildReviewConditionItem(
           context,
           '별점 리뷰',
           true,
           widget.campaign.ratingRecruitCount ?? 0,
           widget.campaign.ratingFee ?? 0,
-        );
-      case 'purchase':
-        return _buildReviewConditionItem(
+        ),
+      );
+    }
+
+    // 구매 확인
+    if ((widget.campaign.purchaseRecruitCount ?? 0) > 0) {
+      reviewConditions.add(
+        _buildReviewConditionItem(
           context,
           '구매 확인',
           true,
           widget.campaign.purchaseRecruitCount ?? 0,
           widget.campaign.purchaseFee ?? 0,
-        );
-      default:
-        return const SizedBox.shrink();
+        ),
+      );
     }
+
+    if (reviewConditions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(children: reviewConditions);
   }
 
   Widget _buildReviewConditionItem(
@@ -565,7 +590,7 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
             ),
             const SizedBox(height: 12),
 
-            // 입금자명 정보
+            // 입금자명과 안내를 한 줄로 표시
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -578,59 +603,11 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
                   Icon(Icons.person, color: Colors.green.shade600, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '입금자명',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '오선애',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // 입금 안내
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet,
-                    color: Colors.blue.shade600,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
                     child: Text(
-                      '입금은 리뷰제출 당일 밤 또는 새벽 중 입금됩니다.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      '입금자명: 오선애',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue.shade700,
+                        color: Colors.green.shade700,
                       ),
                     ),
                   ),
@@ -643,11 +620,11 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
     );
   }
 
-  Widget _buildCompleteButton(BuildContext context) {
+  Widget _buildApplyButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () => _showPurchaseCompleteDialog(context),
+        onPressed: () => _showApplyDialog(context),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
           backgroundColor: Colors.green,
@@ -661,16 +638,15 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
     );
   }
 
-  void _showPurchaseCompleteDialog(BuildContext context) {
+  void _showApplyDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('구매완료 확인'),
+          title: const Text('구매완료'),
           content: Text(
-            '상품: ${widget.campaign.item.name}\n'
-            '리뷰 타입: ${_getReviewTypeText(widget.selectedReviewType)}\n\n'
-            '구매를 완료하셨나요?',
+            '상품: ${widget.campaign.item.name}\n\n'
+            '구매를 완료하셨습니까?',
           ),
           actions: [
             TextButton(
@@ -680,13 +656,16 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                await _updatePurchaseStatus(context);
+                // 홈으로 이동
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/', (route) => false);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('확인'),
+              child: const Text('구매완료'),
             ),
           ],
         );
@@ -694,94 +673,29 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
     );
   }
 
-  Future<void> _updatePurchaseStatus(BuildContext context) async {
-    try {
-      final recruitProvider = Provider.of<CampaignRecruitProvider>(
-        context,
-        listen: false,
-      );
-
-      // 최근 신청한 recruit 찾기 (같은 캠페인, 같은 리뷰 타입)
-      final recruits =
-          recruitProvider.recruits
-              .where(
-                (recruit) =>
-                    recruit.campaignId == widget.campaign.shortId &&
-                    recruit.reviewType == widget.selectedReviewType,
-              )
-              .toList();
-
-      if (recruits.isNotEmpty) {
-        // 가장 최근 신청한 recruit 선택
-        final latestRecruit = recruits.last;
-
-        // 구매완료 상태로 업데이트
-        await recruitProvider.updatePurchaseStatus(latestRecruit.id, true);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('구매완료 처리되었습니다'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          // 홈으로 돌아가기
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('해당 캠페인 신청 정보를 찾을 수 없습니다'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('오류가 발생했습니다: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  String _getReviewTypeText(String reviewType) {
-    switch (reviewType) {
-      case 'video':
-        return '동영상 리뷰';
-      case 'photos':
-        return '사진 리뷰';
-      case 'text':
-        return '텍스트 리뷰';
-      case 'rating':
-        return '별점 리뷰';
-      case 'purchase':
-        return '구매확정';
-      default:
-        return '알 수 없음';
-    }
-  }
-
   String _getCorsProxyUrl(String originalUrl) {
-    const proxyUrls = [
-      'https://api.allorigins.win/raw?url=',
-      'https://cors-anywhere.herokuapp.com/',
-      'https://thingproxy.freeboard.io/fetch/',
-    ];
-    return '${proxyUrls.first}${Uri.encodeComponent(originalUrl)}';
+    // 더 안정적인 CORS 프록시 사용
+    return 'https://api.allorigins.win/raw?url=${Uri.encodeComponent(originalUrl)}';
+  }
+
+  Widget _buildFallbackImage() {
+    return Container(
+      width: 80,
+      height: 80,
+      color: Colors.grey.shade200,
+      child: const Icon(
+        Icons.image_not_supported,
+        color: Colors.grey,
+        size: 30,
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
     return '${date.year}년 ${date.month}월 ${date.day}일';
   }
 
-  void _searchKeywords(BuildContext context, String keywords) {
+  void _searchKeywords(BuildContext context, String keywords) async {
     // 키워드를 쉼표로 분리하여 검색어로 사용
     final searchTerms =
         keywords
@@ -794,22 +708,77 @@ class _CampaignGuidePageState extends State<CampaignGuidePage> {
       // 첫 번째 키워드를 메인 검색어로 사용
       final mainKeyword = searchTerms.first;
 
-      // 검색 URL 생성 (예: 쿠팡 검색)
-      final searchUrl =
-          'https://www.coupang.com/np/search?q=${Uri.encodeComponent(mainKeyword)}';
+      // 캠페인에 저장된 쿠팡 링크 사용
+      String? searchUrl;
+      if (keywords == widget.campaign.keywords &&
+          widget.campaign.mainKeywordLink != null) {
+        searchUrl = widget.campaign.mainKeywordLink;
+        print('메인 키워드 쿠팡 링크 사용: $searchUrl');
+      } else if (keywords == widget.campaign.subKeywords &&
+          widget.campaign.subKeywordLink != null) {
+        searchUrl = widget.campaign.subKeywordLink;
+        print('서브 키워드 쿠팡 링크 사용: $searchUrl');
+      } else {
+        // 쿠팡 링크가 없는 경우 기본 검색 URL 생성
+        searchUrl =
+            'https://www.coupang.com/np/search?q=${Uri.encodeComponent(mainKeyword)}';
+        print('기본 검색 URL 사용: $searchUrl');
+      }
 
       // 웹 브라우저에서 검색 실행
-      // 실제 앱에서는 url_launcher 패키지를 사용할 수 있습니다
-      print('검색 실행: $searchUrl');
+      if (searchUrl != null) {
+        try {
+          // 웹에서는 window.open을 사용
+          if (kIsWeb) {
+            // 웹 환경에서는 dart:html을 사용
+            html.window.open(searchUrl, '_blank');
+            print('웹에서 링크 열기 성공: $searchUrl');
 
-      // 사용자에게 알림
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"$mainKeyword" 검색을 실행합니다'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
+            // 사용자에게 성공 알림
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('"$mainKeyword" 검색 페이지를 새 탭에서 열었습니다'),
+                duration: const Duration(seconds: 2),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            // 모바일/데스크톱에서는 url_launcher 사용
+            final uri = Uri.parse(searchUrl);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+              print('링크 열기 성공: $searchUrl');
+
+              // 사용자에게 성공 알림
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('"$mainKeyword" 검색 페이지를 열었습니다'),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else {
+              print('링크를 열 수 없습니다: $searchUrl');
+              _showErrorSnackBar(context, '링크를 열 수 없습니다');
+            }
+          }
+        } catch (e) {
+          print('링크 열기 오류: $e');
+          _showErrorSnackBar(context, '링크를 여는 중 오류가 발생했습니다: $e');
+        }
+      } else {
+        _showErrorSnackBar(context, '검색 URL을 생성할 수 없습니다');
+      }
     }
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }

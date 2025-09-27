@@ -50,6 +50,15 @@ dependencies:
   # 상태 관리
   provider: ^6.1.2
 
+  # HTTP 통신
+  http: ^1.1.0
+
+  # URL 실행
+  url_launcher: ^6.2.2
+
+  # 로컬 저장소 (신청자 정보 캐싱)
+  shared_preferences: ^2.2.2
+
   # Firebase (최신 안정 버전)
   firebase_core: ^3.6.0
   cloud_firestore: ^5.4.3

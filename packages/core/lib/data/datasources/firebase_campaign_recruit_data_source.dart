@@ -47,13 +47,24 @@ class FirebaseCampaignRecruitDataSource implements CampaignRecruitDataSource {
 
   @override
   Future<List<CampaignRecruit>> getRecruitsByCampaign(String campaignId) async {
+    print(
+        'FirebaseCampaignRecruitDataSource: getRecruitsByCampaign 시작 - campaignId: $campaignId');
     final snapshot = await _firestore
         .collection(_collection)
-        .where('campaignId', isEqualTo: campaignId)
+        .where('campaignFullId', isEqualTo: campaignId)
         .get();
-    return snapshot.docs
+
+    print(
+        'FirebaseCampaignRecruitDataSource: 쿼리 결과 - ${snapshot.docs.length}개 문서 발견');
+
+    final recruits = snapshot.docs
         .map((doc) => CampaignRecruit.fromJson(doc.data()))
         .toList();
+
+    print(
+        'FirebaseCampaignRecruitDataSource: 변환된 모집 데이터 - ${recruits.length}개');
+
+    return recruits;
   }
 
   @override
@@ -70,80 +81,44 @@ class FirebaseCampaignRecruitDataSource implements CampaignRecruitDataSource {
   @override
   Future<List<CampaignRecruit>> getRecruitsByApplicant(
       String phoneNumber) async {
-    // applicantPhone 또는 buyerPhone으로 검색
-    final applicantSnapshot = await _firestore
+    // 신청자 번호 기준으로 조회
+    final snapshot = await _firestore
         .collection(_collection)
         .where('applicantPhone', isEqualTo: phoneNumber)
         .get();
 
-    final buyerSnapshot = await _firestore
-        .collection(_collection)
-        .where('buyerPhone', isEqualTo: phoneNumber)
-        .get();
-
-    final allDocs = [...applicantSnapshot.docs, ...buyerSnapshot.docs];
-
-    // 중복 제거 (같은 문서가 두 번 나올 수 있음)
-    final uniqueDocs = allDocs
-        .fold<Map<String, QueryDocumentSnapshot>>(
-          {},
-          (map, doc) {
-            map[doc.id] = doc;
-            return map;
-          },
-        )
-        .values
-        .toList();
-
-    return uniqueDocs
-        .map((doc) =>
-            CampaignRecruit.fromJson(doc.data() as Map<String, dynamic>))
+    return snapshot.docs
+        .map((doc) => CampaignRecruit.fromJson(doc.data()))
         .toList();
   }
 
   @override
   Future<List<CampaignRecruit>> getRecruitsByCampaignAndApplicant(
       String campaignId, String phoneNumber) async {
-    // applicantPhone 또는 buyerPhone으로 검색
-    final applicantSnapshot = await _firestore
-        .collection(_collection)
-        .where('campaignId', isEqualTo: campaignId)
-        .where('applicantPhone', isEqualTo: phoneNumber)
-        .get();
-
-    final buyerSnapshot = await _firestore
+    // 구매자 번호 기준으로만 중복 체크
+    final snapshot = await _firestore
         .collection(_collection)
         .where('campaignId', isEqualTo: campaignId)
         .where('buyerPhone', isEqualTo: phoneNumber)
         .get();
 
-    final allDocs = [...applicantSnapshot.docs, ...buyerSnapshot.docs];
-
-    // 중복 제거 (같은 문서가 두 번 나올 수 있음)
-    final uniqueDocs = allDocs
-        .fold<Map<String, QueryDocumentSnapshot>>(
-          {},
-          (map, doc) {
-            map[doc.id] = doc;
-            return map;
-          },
-        )
-        .values
-        .toList();
-
-    return uniqueDocs
-        .map((doc) =>
-            CampaignRecruit.fromJson(doc.data() as Map<String, dynamic>))
+    return snapshot.docs
+        .map((doc) => CampaignRecruit.fromJson(doc.data()))
         .toList();
   }
 
   @override
   Future<Map<String, int>> getRecruitCountsByCampaignAndType(
       String campaignId) async {
+    print(
+        'FirebaseCampaignRecruitDataSource: getRecruitCountsByCampaignAndType 시작 - campaignId: $campaignId');
     final snapshot = await _firestore
         .collection(_collection)
-        .where('campaignId', isEqualTo: campaignId)
+        .where('campaignFullId', isEqualTo: campaignId)
         .get();
+
+    print(
+        'FirebaseCampaignRecruitDataSource: getRecruitCountsByCampaignAndType 쿼리 결과 - ${snapshot.docs.length}개 문서 발견');
 
     final Map<String, int> counts = {};
     for (final doc in snapshot.docs) {
@@ -151,6 +126,8 @@ class FirebaseCampaignRecruitDataSource implements CampaignRecruitDataSource {
       counts[recruit.reviewType] = (counts[recruit.reviewType] ?? 0) + 1;
     }
 
+    print(
+        'FirebaseCampaignRecruitDataSource: getRecruitCountsByCampaignAndType 결과 - $counts');
     return counts;
   }
 }

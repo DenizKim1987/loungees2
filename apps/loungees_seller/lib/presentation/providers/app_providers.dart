@@ -2,6 +2,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
+import 'package:shared/shared.dart';
 
 import 'auth_provider.dart';
 import 'campaign_provider.dart';
@@ -12,6 +13,9 @@ class AppProviders {
   static List<Widget> get providers => [
     // 인증 프로바이더
     ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
+
+    // 파트너스 프로바이더
+    ChangeNotifierProvider<PartnersProvider>(create: (_) => PartnersProvider()),
 
     // 아이템 프로바이더 (파이어베이스 연동)
     ChangeNotifierProvider<ItemProvider>(
@@ -110,6 +114,8 @@ class AppProviders {
         );
         final getRecruitsByApplicantUseCase =
             GetCampaignRecruitsByApplicantUseCase(campaignRecruitRepository);
+        final getRecruitCountsByCampaignAndTypeUseCase =
+            GetRecruitCountsByCampaignAndTypeUseCase(campaignRecruitRepository);
 
         // 새로운 유즈케이스들
         final checkDuplicateApplicationUseCase =
@@ -130,6 +136,8 @@ class AppProviders {
           getRecruitsByCampaignUseCase: getRecruitsByCampaignUseCase,
           getRecruitsBySellerUseCase: getRecruitsBySellerUseCase,
           getRecruitsByApplicantUseCase: getRecruitsByApplicantUseCase,
+          getRecruitCountsByCampaignAndTypeUseCase:
+              getRecruitCountsByCampaignAndTypeUseCase,
           validateAndCreateRecruitUseCase: validateAndCreateRecruitUseCase,
         );
       },

@@ -69,7 +69,67 @@ class AppShell extends StatelessWidget {
       return CampaignDetailPage(campaignId: campaignId);
     }
 
-    // /campaign-guide/campaignId 형태의 라우트 처리 (캠페인 가이드)
+    // /campaign-guide?id=XXXXXX 또는 /#/campaign-guide?id=XXXXXX 형태의 라우트 처리 (캠페인 가이드)
+    if (settings.name?.contains('campaign-guide') == true) {
+      String? campaignId;
+      final routeName = settings.name!;
+
+      // 해시 라우팅 처리: /#/campaign-guide?id=EPXQQD 또는 /#/campaign-guide/?id=EPXQQD
+      if (routeName.startsWith('/#/')) {
+        final cleanRoute = routeName.substring(3); // /#/ 제거
+        // ?가 여러 번 있는 경우 정리
+        final normalizedRoute = cleanRoute.replaceAll(RegExp(r'\?+'), '?');
+        final uri = Uri.parse('/$normalizedRoute');
+        campaignId = uri.queryParameters['id'];
+      }
+      // 일반 라우팅 처리: /campaign-guide?id=EPXQQD
+      else if (routeName.startsWith('/campaign-guide')) {
+        final uri = Uri.parse(routeName);
+        campaignId = uri.queryParameters['id'];
+      }
+
+      if (campaignId == null || campaignId.isEmpty) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('오류')),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('캠페인 ID가 필요합니다.'),
+                SizedBox(height: 16),
+                Text('라우트: $routeName', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+        );
+      }
+
+      return FutureBuilder<Campaign?>(
+        future: Provider.of<CampaignProvider>(
+          context,
+          listen: false,
+        ).getCampaignByShortId(campaignId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('로딩 중...')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (snapshot.hasError || snapshot.data == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('오류')),
+              body: const Center(child: Text('캠페인을 찾을 수 없습니다.')),
+            );
+          }
+
+          return CampaignGuidePage(campaign: snapshot.data!);
+        },
+      );
+    }
+
+    // /campaign-guide/campaignId 형태의 라우트 처리 (캠페인 가이드) - 기존 방식 유지
     if (settings.name?.startsWith('/campaign-guide/') == true) {
       final campaignId = settings.name!.split('/').last;
       return FutureBuilder<Campaign?>(
@@ -92,10 +152,7 @@ class AppShell extends StatelessWidget {
             );
           }
 
-          return CampaignGuidePage(
-            campaign: snapshot.data!,
-            selectedReviewType: 'text', // 기본값으로 텍스트 리뷰 설정
-          );
+          return CampaignGuidePage(campaign: snapshot.data!);
         },
       );
     }

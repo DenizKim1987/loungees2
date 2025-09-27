@@ -7,6 +7,7 @@ class Item {
   final String sellerCompany;
   final List<String> filters;
   final String? imageUrl; // 이미지 URL 추가
+  final String? productUrl; // 상품 URL 추가
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,6 +19,7 @@ class Item {
     required this.sellerCompany,
     required this.filters,
     this.imageUrl, // 이미지 URL 추가
+    this.productUrl, // 상품 URL 추가
     required this.createdAt,
     required this.updatedAt,
   });
@@ -31,6 +33,7 @@ class Item {
       sellerCompany: json['sellerCompany'] ?? '',
       filters: List<String>.from(json['filters'] ?? []),
       imageUrl: json['imageUrl'], // 이미지 URL 추가
+      productUrl: json['productUrl'], // 상품 URL 추가
       createdAt: DateTime.parse(
         json['createdAt'] ?? DateTime.now().toIso8601String(),
       ),
@@ -49,6 +52,7 @@ class Item {
       'sellerCompany': sellerCompany,
       'filters': filters,
       'imageUrl': imageUrl, // 이미지 URL 추가
+      'productUrl': productUrl, // 상품 URL 추가
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -62,6 +66,7 @@ class Item {
     String? sellerCompany,
     List<String>? filters,
     String? imageUrl, // 이미지 URL 추가
+    String? productUrl, // 상품 URL 추가
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -73,6 +78,7 @@ class Item {
       sellerCompany: sellerCompany ?? this.sellerCompany,
       filters: filters ?? this.filters,
       imageUrl: imageUrl ?? this.imageUrl, // 이미지 URL 추가
+      productUrl: productUrl ?? this.productUrl, // 상품 URL 추가
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

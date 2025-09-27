@@ -1,6 +1,7 @@
 // 캠페인 프로바이더 - 파이어베이스 연동
 import 'package:core/core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared/shared.dart';
 
 class CampaignProvider with ChangeNotifier {
   final CreateCampaignUseCase _createCampaignUseCase;
@@ -12,6 +13,8 @@ class CampaignProvider with ChangeNotifier {
   final GetCampaignByShortIdUseCase _getCampaignByShortIdUseCase;
   final GetRecruitCountsByCampaignAndTypeUseCase
   _getRecruitCountsByCampaignAndTypeUseCase;
+
+  final PartnersService _partnersService = PartnersService();
 
   CampaignProvider({
     required CreateCampaignUseCase createCampaignUseCase,
@@ -49,7 +52,52 @@ class CampaignProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _createCampaignUseCase(campaign);
+      // 쿠팡 파트너스 링크 생성
+      String? mainKeywordLink;
+      String? subKeywordLink;
+      String? productLink;
+
+      try {
+        // 메인 키워드 링크 생성 (웹 + 딥링크)
+        if (campaign.keywords.isNotEmpty) {
+          final searchLinks = await _partnersService.generateSearchLinks(
+            campaign.keywords,
+          );
+          mainKeywordLink = searchLinks['web']; // 웹 링크 사용
+          print('CampaignProvider: 메인 키워드 링크 생성 완료 - $mainKeywordLink');
+        }
+
+        // 서브 키워드 링크 생성 (웹 + 딥링크)
+        if (campaign.subKeywords.isNotEmpty) {
+          final searchLinks = await _partnersService.generateSearchLinks(
+            campaign.subKeywords,
+          );
+          subKeywordLink = searchLinks['web']; // 웹 링크 사용
+          print('CampaignProvider: 서브 키워드 링크 생성 완료 - $subKeywordLink');
+        }
+
+        // 상품 링크 생성 (웹 + 딥링크)
+        if (campaign.item.productUrl != null &&
+            campaign.item.productUrl!.isNotEmpty) {
+          final productLinks = await _partnersService.generateProductLinks(
+            campaign.item.productUrl!,
+          );
+          productLink = productLinks['web']; // 웹 링크 사용
+          print('CampaignProvider: 상품 링크 생성 완료 - $productLink');
+        }
+      } catch (e) {
+        print('CampaignProvider: 쿠팡 링크 생성 오류 - $e');
+        // 링크 생성 실패해도 캠페인은 생성하도록 진행
+      }
+
+      // 쿠팡 링크가 포함된 캠페인 생성
+      final campaignWithLinks = campaign.copyWith(
+        mainKeywordLink: mainKeywordLink,
+        subKeywordLink: subKeywordLink,
+        productLink: productLink,
+      );
+
+      await _createCampaignUseCase(campaignWithLinks);
       print('CampaignProvider: 캠페인 생성 완료, 목록 다시 로드 시작');
       await loadCampaigns(); // 전체 캠페인 다시 로드
       print('CampaignProvider: 캠페인 목록 로드 완료 - 총 ${_campaigns.length}개');
@@ -66,13 +114,90 @@ class CampaignProvider with ChangeNotifier {
   // 캠페인 수정 (파이어베이스 연동)
   Future<void> updateCampaign(String id, Campaign updatedCampaign) async {
     try {
+      print('CampaignProvider: 캠페인 수정 시작 - $id');
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      await _updateCampaignUseCase(updatedCampaign);
+      // 기존 캠페인 정보 가져오기
+      final existingCampaign = _campaigns.firstWhere(
+        (c) => c.id == id,
+        orElse: () => updatedCampaign,
+      );
+
+      // 쿠팡 파트너스 링크 생성/업데이트
+      String? mainKeywordLink = updatedCampaign.mainKeywordLink;
+      String? subKeywordLink = updatedCampaign.subKeywordLink;
+      String? productLink = updatedCampaign.productLink;
+
+      try {
+        // 메인 키워드가 변경되었거나 링크가 비어있는 경우 재생성
+        if (updatedCampaign.keywords != existingCampaign.keywords ||
+            updatedCampaign.mainKeywordLink == null ||
+            updatedCampaign.mainKeywordLink!.isEmpty) {
+          if (updatedCampaign.keywords.isNotEmpty) {
+            final searchLinks = await _partnersService.generateSearchLinks(
+              updatedCampaign.keywords,
+            );
+            mainKeywordLink = searchLinks['web'];
+            print('CampaignProvider: 메인 키워드 링크 재생성 완료 - $mainKeywordLink');
+          } else {
+            mainKeywordLink = null;
+            print('CampaignProvider: 메인 키워드가 비어있어 링크 제거');
+          }
+        }
+
+        // 서브 키워드가 변경되었거나 링크가 비어있는 경우 재생성
+        if (updatedCampaign.subKeywords != existingCampaign.subKeywords ||
+            updatedCampaign.subKeywordLink == null ||
+            updatedCampaign.subKeywordLink!.isEmpty) {
+          if (updatedCampaign.subKeywords.isNotEmpty) {
+            final searchLinks = await _partnersService.generateSearchLinks(
+              updatedCampaign.subKeywords,
+            );
+            subKeywordLink = searchLinks['web'];
+            print('CampaignProvider: 서브 키워드 링크 재생성 완료 - $subKeywordLink');
+          } else {
+            subKeywordLink = null;
+            print('CampaignProvider: 서브 키워드가 비어있어 링크 제거');
+          }
+        }
+
+        // 상품 URL이 변경되었거나 링크가 비어있는 경우 재생성
+        if (updatedCampaign.item.productUrl !=
+                existingCampaign.item.productUrl ||
+            updatedCampaign.productLink == null ||
+            updatedCampaign.productLink!.isEmpty) {
+          if (updatedCampaign.item.productUrl != null &&
+              updatedCampaign.item.productUrl!.isNotEmpty) {
+            final productLinks = await _partnersService.generateProductLinks(
+              updatedCampaign.item.productUrl!,
+            );
+            productLink = productLinks['web'];
+            print('CampaignProvider: 상품 링크 재생성 완료 - $productLink');
+          } else {
+            productLink = null;
+            print('CampaignProvider: 상품 URL이 비어있어 링크 제거');
+          }
+        }
+      } catch (e) {
+        print('CampaignProvider: 쿠팡 링크 생성 오류 - $e');
+        // 링크 생성 실패해도 캠페인은 수정하도록 진행
+      }
+
+      // 쿠팡 링크가 포함된 캠페인으로 수정
+      final campaignWithLinks = updatedCampaign.copyWith(
+        mainKeywordLink: mainKeywordLink,
+        subKeywordLink: subKeywordLink,
+        productLink: productLink,
+      );
+
+      await _updateCampaignUseCase(campaignWithLinks);
+      print('CampaignProvider: 캠페인 수정 완료, 목록 다시 로드 시작');
       await loadCampaigns(); // 전체 캠페인 다시 로드
+      print('CampaignProvider: 캠페인 목록 로드 완료 - 총 ${_campaigns.length}개');
     } catch (e) {
+      print('CampaignProvider: 캠페인 수정 오류 - $e');
       _error = e.toString();
       rethrow;
     } finally {
@@ -166,18 +291,11 @@ class CampaignProvider with ChangeNotifier {
   // Short ID로 캠페인 찾기 (직접 쿼리)
   Future<Campaign?> getCampaignByShortId(String shortId) async {
     try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
       final campaign = await _getCampaignByShortIdUseCase(shortId);
       return campaign;
     } catch (e) {
-      _error = e.toString();
+      print('CampaignProvider: getCampaignByShortId 에러 - $e');
       return null;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
   }
 

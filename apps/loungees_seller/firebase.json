@@ -40,7 +40,7 @@
   },
   "hosting": {
     "site": "loungees-seller",
-    "public": "public",
+    "public": "build/web",
     "ignore": [
       "firebase.json",
       "**/.*",

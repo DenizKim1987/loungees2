@@ -8,6 +8,8 @@ class CampaignRecruitProvider with ChangeNotifier {
   final GetCampaignRecruitsByCampaignUseCase _getRecruitsByCampaignUseCase;
   final GetCampaignRecruitsBySellerUseCase _getRecruitsBySellerUseCase;
   final GetCampaignRecruitsByApplicantUseCase _getRecruitsByApplicantUseCase;
+  final GetRecruitCountsByCampaignAndTypeUseCase
+  _getRecruitCountsByCampaignAndTypeUseCase;
   final ValidateAndCreateRecruitUseCase _validateAndCreateRecruitUseCase;
 
   CampaignRecruitProvider({
@@ -18,6 +20,8 @@ class CampaignRecruitProvider with ChangeNotifier {
     required GetCampaignRecruitsBySellerUseCase getRecruitsBySellerUseCase,
     required GetCampaignRecruitsByApplicantUseCase
     getRecruitsByApplicantUseCase,
+    required GetRecruitCountsByCampaignAndTypeUseCase
+    getRecruitCountsByCampaignAndTypeUseCase,
     required ValidateAndCreateRecruitUseCase validateAndCreateRecruitUseCase,
   }) : _updateRecruitUseCase = updateRecruitUseCase,
        _deleteRecruitUseCase = deleteRecruitUseCase,
@@ -25,6 +29,8 @@ class CampaignRecruitProvider with ChangeNotifier {
        _getRecruitsByCampaignUseCase = getRecruitsByCampaignUseCase,
        _getRecruitsBySellerUseCase = getRecruitsBySellerUseCase,
        _getRecruitsByApplicantUseCase = getRecruitsByApplicantUseCase,
+       _getRecruitCountsByCampaignAndTypeUseCase =
+           getRecruitCountsByCampaignAndTypeUseCase,
        _validateAndCreateRecruitUseCase = validateAndCreateRecruitUseCase;
 
   final List<CampaignRecruit> _recruits = [];
@@ -325,7 +331,7 @@ class CampaignRecruitProvider with ChangeNotifier {
   }
 
   // 모집 개수
-  // 특정 캠페인의 특정 리뷰 타입별 신청자 수 조회
+  // 특정 캠페인의 특정 리뷰 타입별 신청자 수 조회 (직접 카운트만)
   Future<Map<String, int>> getRecruitCountsByCampaignAndType(
     String campaignId,
   ) async {
@@ -334,13 +340,10 @@ class CampaignRecruitProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final recruits = await _getRecruitsByCampaignUseCase(campaignId);
-
-      // 리뷰 타입별로 카운트
-      final Map<String, int> counts = {};
-      for (final recruit in recruits) {
-        counts[recruit.reviewType] = (counts[recruit.reviewType] ?? 0) + 1;
-      }
+      // 직접 카운트만 조회 (전체 데이터를 가져오지 않음)
+      final counts = await _getRecruitCountsByCampaignAndTypeUseCase(
+        campaignId,
+      );
 
       print('CampaignRecruitProvider: 캠페인별 리뷰 타입 신청자 수 조회 완료 - $counts');
       return counts;
@@ -357,7 +360,9 @@ class CampaignRecruitProvider with ChangeNotifier {
   // 특정 캠페인의 특정 리뷰 타입별 신청자 수 조회 (캐시된 데이터 사용)
   Map<String, int> getRecruitCountsByCampaignAndTypeCached(String campaignId) {
     final recruits =
-        _recruits.where((recruit) => recruit.campaignId == campaignId).toList();
+        _recruits
+            .where((recruit) => recruit.campaignFullId == campaignId)
+            .toList();
 
     // 리뷰 타입별로 카운트
     final Map<String, int> counts = {};
