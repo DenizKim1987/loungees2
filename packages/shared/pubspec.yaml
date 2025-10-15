@@ -1,6 +1,7 @@
 name: shared
 description: "Loungees 공유 패키지 - 테마, 위젯, 유틸리티"
 version: 1.0.0+1
+publish_to: "none" # Private package
 
 environment:
   sdk: ^3.7.2

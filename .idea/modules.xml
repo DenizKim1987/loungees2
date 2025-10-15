@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/packages/core/melos_core.iml" filepath="$PROJECT_DIR$/packages/core/melos_core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/apps/loungees_seller/melos_loungees_seller.iml" filepath="$PROJECT_DIR$/apps/loungees_seller/melos_loungees_seller.iml" />
+      <module fileurl="file://$PROJECT_DIR$/packages/theme/melos_loungees_theme.iml" filepath="$PROJECT_DIR$/packages/theme/melos_loungees_theme.iml" />
+      <module fileurl="file://$PROJECT_DIR$/packages/shared/melos_shared.iml" filepath="$PROJECT_DIR$/packages/shared/melos_shared.iml" />
+      <module fileurl="file://$PROJECT_DIR$/melos_loungees2.iml" filepath="$PROJECT_DIR$/melos_loungees2.iml" />
+    </modules>
+  </component>
+</project>

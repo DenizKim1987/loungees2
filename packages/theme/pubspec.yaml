@@ -1,6 +1,7 @@
 name: loungees_theme
 description: "Loungees 테마 패키지 - 브랜드 컬러, 테마, 스타일 정의"
 version: 1.0.0+1
+publish_to: "none" # Private package
 
 environment:
   sdk: ^3.7.2

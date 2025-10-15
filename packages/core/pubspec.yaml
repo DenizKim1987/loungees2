@@ -1,6 +1,7 @@
 name: core
 description: Core package for Loungees apps
 version: 1.0.0+1
+publish_to: "none" # Private package
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

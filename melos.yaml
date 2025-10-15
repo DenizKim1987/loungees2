@@ -1,0 +1,108 @@
+name: loungees2
+repository: https://github.com/daehyunkim/loungees2
+
+packages:
+  - apps/**
+  - packages/**
+
+command:
+  version:
+    # 버전 관리 설정
+    workspaceChangelog: true
+    linkToCommits: true
+    linkToReleases: true
+    commitMessage: "chore: release version %s"
+    push: true
+    gitTagVersion: true
+    tagPrefix: "v"
+    includePrivatePackages: false
+    # 버전 업데이트 시 자동으로 pubspec.yaml 업데이트
+    updatePubspecs: true
+    # 변경사항이 있는 패키지만 버전 업데이트
+    changeset: true
+
+scripts:
+  # 모든 패키지 의존성 설치
+  bootstrap:
+    run: melos bootstrap
+    description: "모든 패키지의 의존성을 설치하고 링크합니다"
+
+  # 모든 패키지 정리
+  clean:
+    run: melos clean
+    description: "모든 패키지의 빌드 캐시와 의존성을 정리합니다"
+
+  # 모든 패키지 테스트 실행
+  test:
+    run: melos exec -- flutter test
+    description: "모든 패키지의 테스트를 실행합니다"
+
+  # 모든 패키지 분석 실행
+  analyze:
+    run: melos exec -- flutter analyze
+    description: "모든 패키지의 코드 분석을 실행합니다"
+
+  # 모든 패키지 포맷팅 실행
+  format:
+    run: melos exec -- dart format .
+    description: "모든 패키지의 코드를 포맷팅합니다"
+
+  # 모든 패키지 빌드 실행
+  build:
+    run: melos exec -- flutter build
+    description: "모든 패키지를 빌드합니다"
+
+  # 앱 실행 (개발 모드)
+  run:
+    run: cd apps/loungees_seller && flutter run
+    description: "loungees_seller 앱을 실행합니다"
+
+  # 웹 빌드
+  build:web:
+    run: cd apps/loungees_seller && flutter build web
+    description: "loungees_seller 앱을 웹으로 빌드합니다"
+
+  # 안드로이드 빌드
+  build:android:
+    run: cd apps/loungees_seller && flutter build apk
+    description: "loungees_seller 앱을 안드로이드 APK로 빌드합니다"
+
+  # iOS 빌드
+  build:ios:
+    run: cd apps/loungees_seller && flutter build ios
+    description: "loungees_seller 앱을 iOS로 빌드합니다"
+
+  # 의존성 업데이트
+  upgrade:
+    run: melos exec -- flutter pub upgrade
+    description: "모든 패키지의 의존성을 업그레이드합니다"
+
+  # 의존성 확인
+  outdated:
+    run: melos exec -- flutter pub outdated
+    description: "모든 패키지의 오래된 의존성을 확인합니다"
+
+  # 버전 업데이트
+  version:
+    run: melos version
+    description: "패키지 버전을 업데이트합니다"
+
+  # 릴리스 생성
+  publish:
+    run: melos publish
+    description: "패키지를 릴리스합니다"
+
+  # Git 상태 확인
+  status:
+    run: git status
+    description: "Git 상태를 확인합니다"
+
+  # Git 커밋
+  commit:
+    run: git add . && git commit -m "$1"
+    description: "변경사항을 커밋합니다 (사용법: melos run commit '커밋 메시지')"
+
+  # Git 푸시
+  push:
+    run: git push
+    description: "변경사항을 원격 저장소에 푸시합니다"

@@ -1,0 +1,8 @@
+# melos_managed_dependency_overrides: core,loungees_theme,shared
+dependency_overrides:
+  core:
+    path: ../../packages/core
+  loungees_theme:
+    path: ../../packages/theme
+  shared:
+    path: ../../packages/shared

@@ -1,0 +1,52 @@
+name: loungees2
+description: "Loungees2 - 멀티 플랫폼 라운지 관리 시스템"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dev_dependencies:
+  # 멜로스 - Dart/Flutter 모노레포 관리 도구
+  melos: ^6.1.0
+
+  # 코드 품질 도구
+  very_good_analysis: ^5.1.0
+
+# 멜로스 설정
+melos:
+  # 패키지 경로 설정
+  packages:
+    - apps/**
+    - packages/**
+
+  # 버전 관리 설정
+  version:
+    workspaceChangelog: true
+    linkToCommits: true
+    linkToReleases: true
+    commitMessage: "chore: release version %s"
+    push: true
+    gitTagVersion: true
+    tagPrefix: "v"
+    includePrivatePackages: false
+    updatePubspecs: true
+    changeset: true
+
+# 프로젝트 정보
+homepage: https://github.com/daehyunkim/loungees2
+repository: https://github.com/daehyunkim/loungees2
+issue_tracker: https://github.com/daehyunkim/loungees2/issues
+
+# 라이선스
+license: MIT
+
+# 키워드
+keywords:
+  - flutter
+  - dart
+  - monorepo
+  - melos
+  - lounge
+  - management
+  - seller
+  - multi-platform
